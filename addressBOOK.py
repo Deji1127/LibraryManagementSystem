@@ -70,7 +70,7 @@ def on_checkout_clicked():
     # Initialize result_label
     on_checkout_clicked.result_label = tk.Label(master, text="")
 
-    if v.get() in ["1", "4"]:
+    if v.get() in ["4"]:
         # Create a centered label and Combobox for selecting a book
         frame = tk.Frame(master)
         frame.pack(padx=10, pady=5, anchor="center")
@@ -98,8 +98,7 @@ def on_checkout_clicked():
         branch_ids = fetch_branch_ids_from_database()
         global branch_var
         branch_var = tk.StringVar()
-        branch_choosen = ttk.Combobox(
-            branch_frame, width=27, textvariable=branch_var)
+        branch_choosen = ttk.Combobox(branch_frame, width=27, textvariable=branch_var)
         branch_choosen['values'] = tuple(branch_ids)
         branch_choosen.pack(side="left", padx=(0, 5))
         branch_choosen.current()
@@ -114,7 +113,66 @@ def on_checkout_clicked():
 
         # Add a label to display the result
         on_checkout_clicked.result_label.pack()
+    elif v.get() in ["1"]:
+        frame = tk.Frame(master)
+        frame.pack(padx=10, pady=5, anchor="center")
 
+        # start of book select label
+        ttk.Label(frame, text="Select a Book:", font=(
+            "Times New Roman", 10)).pack(side="left", padx=(0, 5))
+
+        book_names = fetch_books_from_database()
+        # book_var
+        book_var = tk.StringVar()
+        book_choosen = ttk.Combobox(frame, width=27, textvariable=book_var)
+        book_choosen['values'] = tuple(book_names)
+        book_choosen.pack(side="left", padx=(0, 5))
+        book_choosen.current()
+
+        on_checkout_clicked.book_choosen = book_choosen
+        on_checkout_clicked.label = frame
+
+        branch_frame = tk.Frame(master)
+        branch_frame.pack(padx=10, pady=5, anchor="center")
+
+        # start of branch select label
+        ttk.Label(branch_frame, text="Select Branch ID:", font=(
+            "Times New Roman", 10)).pack(side="left", padx=(0, 5))
+
+        branch_ids = fetch_branch_ids_from_database()
+        # global branch_var
+        branch_var = tk.StringVar()
+        branch_choosen = ttk.Combobox(branch_frame, width=27, textvariable=branch_var)
+        branch_choosen['values'] = tuple(branch_ids)
+        branch_choosen.pack(side="left", padx=(0, 5))
+        branch_choosen.current()
+        on_checkout_clicked.branch_choosen = branch_choosen
+        on_checkout_clicked.branch_label = branch_frame
+
+        # start of card_no label
+        card_frame = tk.Frame(master)
+        card_frame.pack(padx=10, pady=5, anchor="center")
+
+        ttk.Label(card_frame, text="Enter your Card Number:", font=(
+            "Times New Roman", 10)).pack(side="left", padx=(0, 5))
+
+        # Text entry for card number
+        global card_var
+        card_var = tk.StringVar()
+        card_entry = tk.Entry(card_frame, textvariable=card_var, width=27)
+        card_entry.pack(side="left", padx=(0, 5))
+
+        on_checkout_clicked.card_entry = card_entry
+        on_checkout_clicked.card_label = card_frame
+
+
+        # Add a Submit button
+        on_checkout_clicked.submit_button = tk.Button(
+            master, text="Submit", command=on_submit_clicked)
+        on_checkout_clicked.submit_button.pack(pady=10)
+
+        # Add a label to display the result
+        on_checkout_clicked.result_label.pack()
     else:
         destroy_combobox_and_label()
 
@@ -144,6 +202,9 @@ def destroy_combobox_and_label():
     if hasattr(on_checkout_clicked, 'result_label'):
         on_checkout_clicked.result_label.destroy()
         del on_checkout_clicked.result_label
+    if hasattr(on_checkout_clicked, 'card_label'):
+        on_checkout_clicked.card_label.destroy()
+        del on_checkout_clicked.card_label
 
 
 master = tk.Tk()
