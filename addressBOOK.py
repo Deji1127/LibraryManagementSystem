@@ -29,7 +29,6 @@ def fetch_copies_loaned(book_id, branch_id):
     cursor.execute('''
         SELECT No_Of_Copies 
         FROM BOOK_COPIES 
-        NATURAL JOIN BOOK_LOANS
         WHERE Book_Id = ? AND Branch_Id = ? AND Returned_Date IS NULL
     ''', (book_id, branch_id))
 
@@ -71,7 +70,7 @@ def on_checkout_clicked():
     # Initialize result_label
     on_checkout_clicked.result_label = tk.Label(master, text="")
 
-    if v.get() == "4":
+    if v.get() in ["1", "4"]:
         # Create a centered label and Combobox for selecting a book
         frame = tk.Frame(master)
         frame.pack(padx=10, pady=5, anchor="center")
@@ -120,6 +119,9 @@ def on_checkout_clicked():
         destroy_combobox_and_label()
 
 
+# Rest of the code remains unchanged
+
+
 def destroy_combobox_and_label():
     if hasattr(on_checkout_clicked, 'book_choosen'):
         on_checkout_clicked.book_choosen.destroy()
@@ -145,7 +147,11 @@ def destroy_combobox_and_label():
 
 
 master = tk.Tk()
-master.geometry("800x900")
+
+screen_width = master.winfo_screenwidth()
+screen_height = master.winfo_screenheight()
+
+master.geometry(f"{screen_width}x{screen_height}")
 
 v = tk.StringVar(master, "1")
 
