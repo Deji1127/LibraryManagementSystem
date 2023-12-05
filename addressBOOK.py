@@ -3,6 +3,11 @@ from tkinter import ttk
 import sqlite3
 from datetime import datetime, timedelta
 
+# card_var = 0
+# branch_var = 0
+Name = ''
+Address = ''
+Phone = ''
 def fetch_books_from_database():
     connection = sqlite3.connect('lmsproj.db')
     cursor = connection.cursor()
@@ -23,19 +28,22 @@ def fetch_branch_ids_from_database():
     return branch_ids
 
 
-def fetch_copies_loaned(book_id, branch_id):
+def fetch_copies_loaned(Title):
     connection = sqlite3.connect('lmsproj.db')
     cursor = connection.cursor()
     cursor.execute('''
-        SELECT No_Of_Copies 
-        FROM BOOK_COPIES 
-        WHERE Book_Id = ? AND Branch_Id = ?
-    ''', (book_id, branch_id))
-    result = cursor.fetchone()
-    count = result[0] if result is not None else 0
+        SELECT Branch_Name, COUNT(*) AS Number_of_Loans
+        FROM BOOK_LOANS 
+        NATURAL JOIN LIBRARY_BRANCH
+        NATURAL JOIN BOOK
+        WHERE Title = ? 
+        GROUP BY Branch_Id
+    ''', (Title,),)
+    result = cursor.fetchall()
+    # count = result[0] if result is not None else 0
     
     connection.close()
-    return count
+    return result
 
 def fetch_card_info(book_id, branch_id, card_no):
     connection = sqlite3.connect('lmsproj.db')
@@ -66,14 +74,38 @@ def fetch_card_info(book_id, branch_id, card_no):
     connection.close()
 
     return {'Date_out': Date_out, 'Due_date': Due_date}
-    # return 'yomama'
 
+def fetch_borrower(Name, Address, Phone):
+    connection = sqlite3.connect('lmsproj.db')
+    cursor = connection.cursor()
 
+    # Check if the provided card_no is correct
+    cursor.execute('''
+        INSERT INTO BORROWER 
+        VALUES (?, ?, ?, ?);
+    ''', (Name, Address, Phone, "None"),)
+
+    cursor.execute('''
+        SELECT Card_no 
+        FROM BORROWER
+        WHERE Name = ?
+    ''', (Name, Address, Phone),);
+
+    result = cursor.fetchone()
+
+    connection.commit()
+    connection.close()
+
+    return result
 def on_submit_clicked():
     book_title = book_var.get()
+    # branch_id = branch_var
+    # card_no = card_var
     branch_id = int(branch_var.get())
     card_no = int(card_var.get())
-    
+    New_name = Name
+    New_address = Address
+    New_phone = Phone
     connection = sqlite3.connect('lmsproj.db')
     cursor = connection.cursor()
 
@@ -84,17 +116,20 @@ def on_submit_clicked():
     if result:
         book_id = result[0]
 
-        if v.get() == "1":
+        if v.get() in ["1"]:
             card_info = fetch_card_info(book_id, branch_id, card_no)
 
             if not card_info:
                 on_checkout_clicked.result_label.config(text="Invalid card number.")
-
-        if v.get() == "4":
+        if v.get() in ["2"]:
+            new_card_info = fetch_borrower(New_name, New_address, New_phone)
+            on_checkout_clicked.result_label.config(text=f'Your new Card Number is: {new_card_info}')   
+        if v.get() in ["4"]:
             # Calculate the number of copies loaned out for the selected book and branch
-            copies_loaned = fetch_copies_loaned(book_id, branch_id)
+            copies_loaned = fetch_copies_loaned(book_title)
             # Display the result
-            on_checkout_clicked.result_label.config(text=f'Number of Copies Loaned: {copies_loaned}')     
+            for branch_name, number_of_loans in copies_loaned:
+                on_checkout_clicked.result_label.config(text=f'Branch: {branch_name} \t Number of Loans: {number_of_loans}')     
     else:
         on_checkout_clicked.result_label.config(text="Book not found.")
 
@@ -126,23 +161,6 @@ def on_checkout_clicked():
 
         on_checkout_clicked.book_choosen = book_choosen
         on_checkout_clicked.label = frame
-
-        branch_frame = tk.Frame(master)
-        branch_frame.pack(padx=10, pady=5, anchor="center")
-
-        ttk.Label(branch_frame, text="Select Branch ID:", font=(
-            "Times New Roman", 10)).pack(side="left", padx=(0, 5))
-
-        branch_ids = fetch_branch_ids_from_database()
-        global branch_var
-        branch_var = tk.StringVar()
-        branch_choosen = ttk.Combobox(branch_frame, width=27, textvariable=branch_var)
-        branch_choosen['values'] = tuple(branch_ids)
-        branch_choosen.pack(side="left", padx=(0, 5))
-        branch_choosen.current()
-
-        on_checkout_clicked.branch_choosen = branch_choosen
-        on_checkout_clicked.branch_label = branch_frame
 
         # Add a Submit button
         on_checkout_clicked.submit_button = tk.Button(
@@ -178,7 +196,7 @@ def on_checkout_clicked():
             "Times New Roman", 10)).pack(side="left", padx=(0, 5))
 
         branch_ids = fetch_branch_ids_from_database()
-        # global branch_var
+        global branch_var
         branch_var = tk.StringVar()
         branch_choosen = ttk.Combobox(branch_frame, width=27, textvariable=branch_var)
         branch_choosen['values'] = tuple(branch_ids)
@@ -205,6 +223,59 @@ def on_checkout_clicked():
 
 
         # Add a Submit button
+        on_checkout_clicked.submit_button = tk.Button(
+            master, text="Submit", command=on_submit_clicked)
+        on_checkout_clicked.submit_button.pack(pady=10)
+
+        # Add a label to display the result
+        on_checkout_clicked.result_label.pack()
+    elif v.get() in ["2"]:
+        # Name
+        Name_frame = tk.Frame(master)
+        Name_frame.pack(padx=10, pady=5, anchor="center")
+
+        ttk.Label(Name_frame, text="Enter your Name:", font=(
+            "Times New Roman", 10)).pack(side="left", padx=(0, 5))
+
+        global Name
+        Name = tk.StringVar()
+        Name_entry = tk.Entry(Name_frame, textvariable=Name, width=27)
+        Name_entry.pack(side="left", padx=(0, 5))
+
+        on_checkout_clicked.Name_entry = Name_entry
+        on_checkout_clicked.Name_label = Name_frame
+
+        # Address
+        Address_frame = tk.Frame(master)
+        Address_frame.pack(padx=10, pady=5, anchor="center")
+
+        ttk.Label(Address_frame, text="Enter you Address:", font=(
+            "Times New Roman", 10)).pack(side="left", padx=(0, 5))
+
+        global Address
+        Address = tk.StringVar()
+        Address_entry = tk.Entry(Address_frame, textvariable=Address, width=27)
+        Address_entry.pack(side="left", padx=(0, 5))
+
+        on_checkout_clicked.Address_entry = Address_entry
+        on_checkout_clicked.Address_label = Address_frame
+
+        # Phone
+        Phone_frame = tk.Frame(master)
+        Phone_frame.pack(padx=10, pady=5, anchor="center")
+
+        ttk.Label(Phone_frame, text="Enter your Phone Number:", font=(
+            "Times New Roman", 10)).pack(side="left", padx=(0, 5))
+
+        global Phone
+        Phone = tk.StringVar()
+        Phone_entry = tk.Entry(Phone_frame, textvariable=Phone, width=27)
+        Phone_entry.pack(side="left", padx=(0, 5))
+
+        on_checkout_clicked.Phone_entry = Phone_entry
+        on_checkout_clicked.Phone_label = Phone_frame
+
+        # Add Submit button
         on_checkout_clicked.submit_button = tk.Button(
             master, text="Submit", command=on_submit_clicked)
         on_checkout_clicked.submit_button.pack(pady=10)
@@ -243,6 +314,15 @@ def destroy_combobox_and_label():
     if hasattr(on_checkout_clicked, 'card_label'):
         on_checkout_clicked.card_label.destroy()
         del on_checkout_clicked.card_label
+    if hasattr(on_checkout_clicked, 'Name_label'):
+        on_checkout_clicked.Name_label.destroy()
+        del on_checkout_clicked.Name_label
+    if hasattr(on_checkout_clicked, 'Address_label'):
+        on_checkout_clicked.Address_label.destroy()
+        del on_checkout_clicked.Address_label
+    if hasattr(on_checkout_clicked, 'Phone_label'):
+        on_checkout_clicked.Phone_label.destroy()
+        del on_checkout_clicked.Phone_label
 
 
 master = tk.Tk()
