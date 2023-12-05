@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import sqlite3
 from tkinter import messagebox
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # card_var = 0
 # branch_var = 0
