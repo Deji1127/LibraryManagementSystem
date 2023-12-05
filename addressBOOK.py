@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import sqlite3
+from tkinter import messagebox
 
 
 def fetch_books_from_database():
@@ -70,7 +71,7 @@ def on_checkout_clicked():
     # Initialize result_label
     on_checkout_clicked.result_label = tk.Label(master, text="")
 
-    if v.get() in ["4"]:
+    if v.get() in "4":
         # Create a centered label and Combobox for selecting a book
         frame = tk.Frame(master)
         frame.pack(padx=10, pady=5, anchor="center")
@@ -98,7 +99,8 @@ def on_checkout_clicked():
         branch_ids = fetch_branch_ids_from_database()
         global branch_var
         branch_var = tk.StringVar()
-        branch_choosen = ttk.Combobox(branch_frame, width=27, textvariable=branch_var)
+        branch_choosen = ttk.Combobox(
+            branch_frame, width=27, textvariable=branch_var)
         branch_choosen['values'] = tuple(branch_ids)
         branch_choosen.pack(side="left", padx=(0, 5))
         branch_choosen.current()
@@ -113,6 +115,7 @@ def on_checkout_clicked():
 
         # Add a label to display the result
         on_checkout_clicked.result_label.pack()
+
     elif v.get() in ["1"]:
         frame = tk.Frame(master)
         frame.pack(padx=10, pady=5, anchor="center")
@@ -142,7 +145,8 @@ def on_checkout_clicked():
         branch_ids = fetch_branch_ids_from_database()
         # global branch_var
         branch_var = tk.StringVar()
-        branch_choosen = ttk.Combobox(branch_frame, width=27, textvariable=branch_var)
+        branch_choosen = ttk.Combobox(
+            branch_frame, width=27, textvariable=branch_var)
         branch_choosen['values'] = tuple(branch_ids)
         branch_choosen.pack(side="left", padx=(0, 5))
         branch_choosen.current()
@@ -165,7 +169,6 @@ def on_checkout_clicked():
         on_checkout_clicked.card_entry = card_entry
         on_checkout_clicked.card_label = card_frame
 
-
         # Add a Submit button
         on_checkout_clicked.submit_button = tk.Button(
             master, text="Submit", command=on_submit_clicked)
@@ -173,11 +176,77 @@ def on_checkout_clicked():
 
         # Add a label to display the result
         on_checkout_clicked.result_label.pack()
+    elif v.get() == "2":
+        if hasattr(on_checkout_clicked, 'frame') and on_checkout_clicked.frame.winfo_exists():
+            # Destroy existing frame content
+            on_checkout_clicked.frame.destroy()
+
+        frame = tk.Frame(master)
+        frame.pack(padx=10, pady=5, anchor="center")
+
+        name = tk.Entry(frame, width=27, name='name')
+        name.grid(row=0, column=1)
+
+        address = tk.Entry(frame, width=27, name='address')
+        address.grid(row=1, column=1)
+
+        phone = tk.Entry(frame, width=27, name='phone')
+        phone.grid(row=2, column=1)
+
+        name_label = tk.Label(frame, text='Enter Name: ')
+        name_label.grid(row=0, column=0)
+
+        address_label = tk.Label(frame, text='Enter Address: ')
+        address_label.grid(row=1, column=0)
+
+        phoneNo_label = tk.Label(
+            frame, text='Enter Phone (format: 000-000-0000): ')
+        phoneNo_label.grid(row=2, column=0)
+
+        submit_btn = tk.Button(frame, text='Submit',
+                               command=lambda: submit_ab(name, address, phone, frame))
+        submit_btn.grid(row=10, column=0, columnspan=2,
+                        pady=10, padx=10, ipadx=140)
+
+        # Store components for later destruction
+        on_checkout_clicked.name_entry = name
+        on_checkout_clicked.address_entry = address
+        on_checkout_clicked.phone_entry = phone
+        on_checkout_clicked.frame = frame
+
     else:
+        # Handle other cases or cleanup if needed
         destroy_combobox_and_label()
 
 
-# Rest of the code remains unchanged
+def submit_ab(name, address, phone, frame):
+    connection = sqlite3.connect('lmsproj.db')
+    cursor = connection.cursor()
+
+    try:
+        # Get the last Card_No and increment it by 1
+        cursor.execute("SELECT MAX(Card_No) FROM BORROWER")
+        last_card_no = cursor.fetchone()[0]
+        new_card_no = last_card_no + 1 if last_card_no is not None else 1
+
+        # Insert the new entry with the incremented Card_No
+        cursor.execute("INSERT INTO BORROWER (Card_No, Name, Address, Phone) VALUES(:cn, :n, :ad, :p)",
+                       {
+                           'cn': new_card_no,
+                           'n': name.get(),
+                           'ad': address.get(),
+                           'p': phone.get()
+                       })
+    except sqlite3.Error as e:
+        messagebox.showerror("Error", f"Failed to add new borrower: {e}")
+    else:
+        # Display the new Card_No
+        result1_label = tk.Label(
+            frame, text="NEW CARD NUMBER: " + str(new_card_no))
+        result1_label.grid(row=11, column=0, columnspan=2, pady=20)
+
+    connection.commit()
+    connection.close()
 
 
 def destroy_combobox_and_label():
@@ -202,9 +271,32 @@ def destroy_combobox_and_label():
     if hasattr(on_checkout_clicked, 'result_label'):
         on_checkout_clicked.result_label.destroy()
         del on_checkout_clicked.result_label
+
+    if hasattr(on_checkout_clicked, 'card_entry'):
+        on_checkout_clicked.card_entry.destroy()
+        del on_checkout_clicked.card_entry
+
     if hasattr(on_checkout_clicked, 'card_label'):
         on_checkout_clicked.card_label.destroy()
         del on_checkout_clicked.card_label
+
+    if hasattr(on_checkout_clicked, 'name_entry'):
+        on_checkout_clicked.name_entry.destroy()
+        del on_checkout_clicked.name_entry
+
+    if hasattr(on_checkout_clicked, 'address_entry'):
+        on_checkout_clicked.address_entry.destroy()
+        del on_checkout_clicked.address_entry
+
+    if hasattr(on_checkout_clicked, 'phone_entry'):
+        on_checkout_clicked.phone_entry.destroy()
+        del on_checkout_clicked.phone_entry
+
+    if hasattr(on_checkout_clicked, 'frame'):
+        on_checkout_clicked.frame.destroy()
+        del on_checkout_clicked.frame
+
+# The rest of your code...
 
 
 master = tk.Tk()
