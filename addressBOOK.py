@@ -116,7 +116,7 @@ def on_checkout_clicked():
         # Add a label to display the result
         on_checkout_clicked.result_label.pack()
 
-    elif v.get() in ["1"]:
+    elif v.get() in "1":
         frame = tk.Frame(master)
         frame.pack(padx=10, pady=5, anchor="center")
 
@@ -295,8 +295,6 @@ def destroy_combobox_and_label():
     if hasattr(on_checkout_clicked, 'frame'):
         on_checkout_clicked.frame.destroy()
         del on_checkout_clicked.frame
-
-# The rest of your code...
 
 
 master = tk.Tk()
