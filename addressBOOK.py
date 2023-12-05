@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import sqlite3
-
+from datetime import datetime, timedelta
 
 def fetch_books_from_database():
     connection = sqlite3.connect('lmsproj.db')
@@ -38,6 +38,37 @@ def fetch_copies_loaned(book_id, branch_id):
     connection.close()
     return count
 
+def fetch_card_info(book_id, branch_id, card_no):
+    connection = sqlite3.connect('lmsproj.db')
+    cursor = connection.cursor()
+
+    # Check if the provided card_no is correct
+    cursor.execute('''
+        SELECT Card_No 
+        FROM BORROWER
+        WHERE Card_No = ?;
+    ''', (card_no,))
+
+    result = cursor.fetchone()
+
+    if not result:
+        connection.close()
+        return None  # Invalid card_no
+
+    # Insert a new record into BOOK_LOANS table
+    Date_out = datetime.now().strftime('%Y-%m-%d')
+    Due_date = (datetime.now() + timedelta(days=10)).strftime('%Y-%m-%d')
+
+    cursor.execute('''
+        INSERT INTO BOOK_LOANS (Book_Id, Branch_Id, Card_No, Date_out, Due_date)
+        VALUES (?, ?, ?, ?, ?);
+    ''', (book_id, branch_id, card_no, Date_out, Due_date))
+
+    connection.commit()
+    connection.close()
+
+    return {'Date_out': Date_out, 'Due_date': Due_date}
+
 
 def on_submit_clicked():
     book_title = book_var.get()
@@ -57,6 +88,14 @@ def on_submit_clicked():
         # Display the result
         on_checkout_clicked.result_label.config(
             text=f'Number of Copies Loaned: {copies_loaned}')
+        
+        
+        if v.get() == "1":
+            card_no = card_var.get()
+            card_info = fetch_card_info(book_id, branch_id, card_no)
+
+            if not card_info:
+                on_checkout_clicked.result_label.config(text="Invalid card number.")
     else:
         on_checkout_clicked.result_label.config(text="Book not found.")
 
