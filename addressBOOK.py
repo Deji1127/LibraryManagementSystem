@@ -3,6 +3,7 @@ from tkinter import ttk
 import sqlite3
 from tkinter import messagebox
 from datetime import datetime, timedelta
+from tkinter import Scrollbar
 
 # card_var = 0
 # branch_var = 0
@@ -154,6 +155,7 @@ def on_checkout_clicked():
     # Initialize result_label
     on_checkout_clicked.result_label = tk.Label(master, text="")
 
+    
     if v.get() in "4":
         # Create a centered label and Combobox for selecting a book
         frame = tk.Frame(master)
@@ -552,6 +554,7 @@ screen_width = master.winfo_screenwidth()
 screen_height = master.winfo_screenheight()
 
 master.geometry(f"{screen_width}x{screen_height}")
+
 
 v = tk.StringVar(master, "1")
 
