@@ -3,7 +3,6 @@ from tkinter import ttk
 import sqlite3
 from tkinter import messagebox
 from datetime import datetime, timedelta
-from tkinter import Scrollbar
 
 # card_var = 0
 # branch_var = 0
@@ -105,7 +104,7 @@ def fetch_borrower(Name, Address, Phone):
         SELECT Card_no 
         FROM BORROWER
         WHERE Name = ?
-    ''', (Name, Address, Phone),)
+    ''', (Name),)
 
     result = cursor.fetchone()
 
@@ -164,7 +163,6 @@ def on_checkout_clicked():
     # Initialize result_label
     on_checkout_clicked.result_label = tk.Label(master, text="")
 
-    
     if v.get() in "4":
         # Create a centered label and Combobox for selecting a book
         frame = tk.Frame(master)
@@ -403,9 +401,108 @@ def on_checkout_clicked():
 
         # Keep the result frame in the on_checkout_clicked class
 
+    elif v.get() == "7":
+        if hasattr(on_checkout_clicked, 'frame') and on_checkout_clicked.frame.winfo_exists():
+            on_checkout_clicked.frame.destroy()
+
+        # Create a new frame for the book view results
+        frame = tk.Frame(master)
+        frame.pack(padx=10, pady=5, anchor="center")
+
+        # Create labels and entry widgets for borrower ID, book ID, and title
+        borrower_id_label = tk.Label(frame, text='Enter Borrower ID:')
+        borrower_id_label.grid(row=0, column=0)
+
+        book_id_label = tk.Label(frame, text='Enter Book ID:')
+        book_id_label.grid(row=1, column=0)
+
+        title_label = tk.Label(frame, text='Enter Part of Book Title:')
+        title_label.grid(row=2, column=0)
+
+        borrower_id_entry = tk.Entry(frame, width=27, name='borrower_id')
+        borrower_id_entry.grid(row=0, column=1)
+
+        book_id_entry = tk.Entry(frame, width=27, name='book_id')
+        book_id_entry.grid(row=1, column=1)
+
+        title_entry = tk.Entry(frame, width=27, name='title')
+        title_entry.grid(row=2, column=1)
+
+        # Create a Submit button
+        submit_btn = tk.Button(frame, text='Submit', command=lambda: display_book_results(
+            borrower_id_entry.get(), book_id_entry.get(), title_entry.get(), frame))
+
+        submit_btn.grid(row=3, column=0, columnspan=2,
+                        pady=10, padx=10, ipadx=140)
+
+        # Store components for later destruction
+        on_checkout_clicked.borrower_id_entry = borrower_id_entry
+        on_checkout_clicked.book_id_entry = book_id_entry
+        on_checkout_clicked.title_entry = title_entry
+        on_checkout_clicked.frame = frame
+
     else:
         # Handle other cases or cleanup if needed
         destroy_combobox_and_label()
+
+
+def display_book_results(borrower_id, book_id, title_partial, result_frame):
+    connection = sqlite3.connect('lmsproj.db')
+    cursor = connection.cursor()
+
+    try:
+        # Remove previous results
+        for widget in result_frame.winfo_children():
+            widget.destroy()
+
+        # Construct the SQL query based on user input
+        query = """
+            SELECT b.Book_Id, b.Title, bl.Card_No, bl.Date_Out, bl.Due_Date, bl.Returned_Date,
+                   CASE
+                       WHEN bl.LateFeeBalance IS NOT NULL THEN '$' || ROUND(bl.LateFeeBalance, 2)
+                       ELSE 'Non-Applicable'
+                   END AS LateFeeAmount
+            FROM vBookLoanInfo bl
+            JOIN BOOK b ON bl.Book_Id = b.Book_Id
+            WHERE bl.Card_No = ? 
+              AND (b.Book_Id = ? OR b.Title LIKE ? OR b.Title LIKE ?)
+            ORDER BY COALESCE(bl.LateFeeBalance, 0) DESC;
+        """
+        params = (borrower_id, book_id,
+                  f"%{title_partial}%", f"%{title_partial}%")
+
+        # Execute the SQL query
+        cursor.execute(query, params)
+        book_results = cursor.fetchall()
+
+        # Display the book results
+        if book_results:
+            result_label = tk.Label(result_frame, text="Book Results:")
+            result_label.grid(row=0, column=0, columnspan=2, pady=10)
+
+            for row in book_results:
+                # Convert datetime to string for display
+                returned_date_str = row[5].strftime(
+                    "%Y-%m-%d") if row[5] else 'NULL'
+                result_info_label = tk.Label(result_frame, text=f"Book Id: {row[0]}, Title: {row[1]}, Borrower ID: {row[2]}, "
+                                                                f"Date Out: {row[3]}, Due Date: {row[4]}, Returned Date: {returned_date_str}, "
+                                                                f"Late Fee: {row[6]}")
+                result_info_label.grid(row=book_results.index(
+                    row) + 1, column=0, columnspan=2, pady=5)
+
+        else:
+            result_label = tk.Label(result_frame, text="No matching results.")
+            result_label.grid(row=0, column=0, columnspan=2, pady=10)
+
+    except sqlite3.Error as e:
+        error_label = tk.Label(
+            result_frame, text=f"Error: Failed to retrieve book results: {e}", fg="red")
+        error_label.grid(row=0, column=0, columnspan=2, pady=10)
+
+    connection.close()
+
+    # Store the result_frame in the on_checkout_clicked class for later destruction
+    on_checkout_clicked.result_frame = result_frame
 
 
 def display_borrower_results(borrower_id, borrower_name, result_frame):
@@ -651,7 +748,6 @@ screen_width = master.winfo_screenwidth()
 screen_height = master.winfo_screenheight()
 
 master.geometry(f"{screen_width}x{screen_height}")
-
 
 v = tk.StringVar(master, "1")
 
