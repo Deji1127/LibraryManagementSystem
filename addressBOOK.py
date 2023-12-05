@@ -29,12 +29,11 @@ def fetch_copies_loaned(book_id, branch_id):
     cursor.execute('''
         SELECT No_Of_Copies 
         FROM BOOK_COPIES 
-        WHERE Book_Id = ? AND Branch_Id = ? AND Returned_Date IS NULL
+        WHERE Book_Id = ? AND Branch_Id = ?
     ''', (book_id, branch_id))
-
     result = cursor.fetchone()
     count = result[0] if result is not None else 0
-
+    
     connection.close()
     return count
 
@@ -60,20 +59,21 @@ def fetch_card_info(book_id, branch_id, card_no):
     Due_date = (datetime.now() + timedelta(days=10)).strftime('%Y-%m-%d')
 
     cursor.execute('''
-        INSERT INTO BOOK_LOANS (Book_Id, Branch_Id, Card_No, Date_out, Due_date)
-        VALUES (?, ?, ?, ?, ?);
-    ''', (book_id, branch_id, card_no, Date_out, Due_date))
-
+        INSERT INTO BOOK_LOANS
+        VALUES (?, ?, ?, ?, ?, ?, ?);
+    ''', (book_id, branch_id, card_no, Date_out, Due_date, "None", "None"),)
     connection.commit()
     connection.close()
 
     return {'Date_out': Date_out, 'Due_date': Due_date}
+    # return 'yomama'
 
 
 def on_submit_clicked():
     book_title = book_var.get()
     branch_id = int(branch_var.get())
-
+    card_no = int(card_var.get())
+    
     connection = sqlite3.connect('lmsproj.db')
     cursor = connection.cursor()
 
@@ -83,19 +83,18 @@ def on_submit_clicked():
 
     if result:
         book_id = result[0]
-        # Calculate the number of copies loaned out for the selected book and branch
-        copies_loaned = fetch_copies_loaned(book_id, branch_id)
-        # Display the result
-        on_checkout_clicked.result_label.config(
-            text=f'Number of Copies Loaned: {copies_loaned}')
-        
-        
+
         if v.get() == "1":
-            card_no = card_var.get()
             card_info = fetch_card_info(book_id, branch_id, card_no)
 
             if not card_info:
                 on_checkout_clicked.result_label.config(text="Invalid card number.")
+
+        if v.get() == "4":
+            # Calculate the number of copies loaned out for the selected book and branch
+            copies_loaned = fetch_copies_loaned(book_id, branch_id)
+            # Display the result
+            on_checkout_clicked.result_label.config(text=f'Number of Copies Loaned: {copies_loaned}')     
     else:
         on_checkout_clicked.result_label.config(text="Book not found.")
 
