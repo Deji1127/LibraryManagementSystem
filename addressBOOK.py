@@ -117,7 +117,7 @@ def fetch_borrower(Name, Address, Phone):
 def on_submit_clicked():
     book_title = book_var.get()
     # branch_id = branch_var
-    # card_no = card_var
+    card_no = card_var
     branch_id = int(branch_var.get())
     card_no = int(card_var.get())
     New_name = Name
@@ -149,7 +149,7 @@ def on_submit_clicked():
             # Display the result
             for branch_name, number_of_loans in copies_loaned:
                 on_checkout_clicked.result_label.config(
-                    text=f'Branch: {branch_name} \t Number of Loans: {number_of_loans}')
+                    text=f'Branch: {branch_name} \n Number of Loans: {number_of_loans}')
     else:
         on_checkout_clicked.result_label.config(text="Book not found.")
 
