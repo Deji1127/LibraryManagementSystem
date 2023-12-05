@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 Name = ''
 Address = ''
 Phone = ''
+
+
 def fetch_books_from_database():
     connection = sqlite3.connect('lmsproj.db')
     cursor = connection.cursor()
@@ -52,9 +54,10 @@ def fetch_copies_loaned(Title):
     ''', (Title,),)
     result = cursor.fetchall()
     # count = result[0] if result is not None else 0
-    
+
     connection.close()
     return result
+
 
 def fetch_card_info(book_id, branch_id, card_no):
     connection = sqlite3.connect('lmsproj.db')
@@ -86,6 +89,7 @@ def fetch_card_info(book_id, branch_id, card_no):
 
     return {'Date_out': Date_out, 'Due_date': Due_date}
 
+
 def fetch_borrower(Name, Address, Phone):
     connection = sqlite3.connect('lmsproj.db')
     cursor = connection.cursor()
@@ -100,7 +104,7 @@ def fetch_borrower(Name, Address, Phone):
         SELECT Card_no 
         FROM BORROWER
         WHERE Name = ?
-    ''', (Name, Address, Phone),);
+    ''', (Name, Address, Phone),)
 
     result = cursor.fetchone()
 
@@ -108,6 +112,8 @@ def fetch_borrower(Name, Address, Phone):
     connection.close()
 
     return result
+
+
 def on_submit_clicked():
     book_title = book_var.get()
     # branch_id = branch_var
@@ -131,16 +137,19 @@ def on_submit_clicked():
             card_info = fetch_card_info(book_id, branch_id, card_no)
 
             if not card_info:
-                on_checkout_clicked.result_label.config(text="Invalid card number.")
+                on_checkout_clicked.result_label.config(
+                    text="Invalid card number.")
         if v.get() in ["2"]:
             new_card_info = fetch_borrower(New_name, New_address, New_phone)
-            on_checkout_clicked.result_label.config(text=f'Your new Card Number is: {new_card_info}')   
+            on_checkout_clicked.result_label.config(
+                text=f'Your new Card Number is: {new_card_info}')
         if v.get() in ["4"]:
             # Calculate the number of copies loaned out for the selected book and branch
             copies_loaned = fetch_copies_loaned(book_title)
             # Display the result
             for branch_name, number_of_loans in copies_loaned:
-                on_checkout_clicked.result_label.config(text=f'Branch: {branch_name} \t Number of Loans: {number_of_loans}')     
+                on_checkout_clicked.result_label.config(
+                    text=f'Branch: {branch_name} \t Number of Loans: {number_of_loans}')
     else:
         on_checkout_clicked.result_label.config(text="Book not found.")
 
@@ -357,9 +366,97 @@ def on_checkout_clicked():
         on_checkout_clicked.to_date_entry = to_date_entry
         on_checkout_clicked.frame = frame
 
+    elif v.get() == "6":
+        if hasattr(on_checkout_clicked, 'frame') and on_checkout_clicked.frame.winfo_exists():
+            on_checkout_clicked.frame.destroy()
+
+        # Create a new frame for the borrower view results
+        frame = tk.Frame(master)
+        frame.pack(padx=10, pady=5, anchor="center")
+
+        # Create labels and entry widgets for borrower ID and name
+        borrower_id_label = tk.Label(frame, text='Enter Borrower ID:')
+        borrower_id_label.grid(row=0, column=0)
+
+        borrower_name_label = tk.Label(frame, text='Enter Borrower Name:')
+        borrower_name_label.grid(row=1, column=0)
+
+        borrower_id_entry = tk.Entry(frame, width=27, name='borrower_id')
+        borrower_id_entry.grid(row=0, column=1)
+
+        borrower_name_entry = tk.Entry(frame, width=27, name='borrower_name')
+        borrower_name_entry.grid(row=1, column=1)
+
+        # Create a Submit button
+        submit_btn = tk.Button(frame, text='Submit', command=lambda: display_borrower_results(
+            borrower_id_entry.get(), borrower_name_entry.get(), frame))
+
+        submit_btn.grid(row=2, column=0, columnspan=2,
+                        pady=10, padx=10, ipadx=140)
+
+        # Store components for later destruction
+        on_checkout_clicked.borrower_id_entry = borrower_id_entry
+        on_checkout_clicked.borrower_name_entry = borrower_name_entry
+        on_checkout_clicked.result_frame = frame
+
+        # Keep the result frame in the on_checkout_clicked class
+
     else:
         # Handle other cases or cleanup if needed
         destroy_combobox_and_label()
+
+
+def display_borrower_results(borrower_id, borrower_name, result_frame):
+    connection = sqlite3.connect('lmsproj.db')
+    cursor = connection.cursor()
+
+    try:
+        # Remove previous results
+        for widget in result_frame.winfo_children():
+            widget.destroy()
+
+        # Construct the SQL query based on user input
+        if borrower_id and borrower_name:
+            query = "SELECT Card_No, Borrower_Name, LateFeeBalance FROM vBookLoanInfo WHERE Card_No = ? AND Borrower_Name LIKE ? ORDER BY LateFeeBalance"
+            params = (borrower_id, f"%{borrower_name}%")
+        elif borrower_id:
+            query = "SELECT Card_No, Borrower_Name, LateFeeBalance FROM vBookLoanInfo WHERE Card_No = ? ORDER BY LateFeeBalance"
+            params = (borrower_id,)
+        elif borrower_name:
+            query = "SELECT Card_No, Borrower_Name, LateFeeBalance FROM vBookLoanInfo WHERE Borrower_Name LIKE ? ORDER BY LateFeeBalance"
+            params = (f"%{borrower_name}%",)
+        else:
+            query = "SELECT Card_No, Borrower_Name, LateFeeBalance FROM vBookLoanInfo ORDER BY LateFeeBalance"
+            params = ()
+
+        # Execute the SQL query
+        cursor.execute(query, params)
+        borrower_results = cursor.fetchall()
+
+        # Display the borrower results
+        if borrower_results:
+            result_label = tk.Label(result_frame, text="Borrower Results:")
+            result_label.grid(row=0, column=0, columnspan=2, pady=10)
+
+            for row in borrower_results:
+                result_info_label = tk.Label(result_frame, text=f"Card No: {row[0]}, Borrower Name: {row[1]}, Late Fee Balance: ${row[2]:.2f}" if row[
+                                             2] is not None else f"Card No: {row[0]}, Borrower Name: {row[1]}, Late Fee Balance: $0.00")
+                result_info_label.grid(row=borrower_results.index(
+                    row) + 1, column=0, columnspan=2, pady=5)
+
+        else:
+            result_label = tk.Label(result_frame, text="No matching results.")
+            result_label.grid(row=0, column=0, columnspan=2, pady=10)
+
+    except sqlite3.Error as e:
+        error_label = tk.Label(
+            result_frame, text=f"Error: Failed to retrieve borrower results: {e}", fg="red")
+        error_label.grid(row=0, column=0, columnspan=2, pady=10)
+
+    connection.close()
+
+    # Store the result_frame in the on_checkout_clicked class for later destruction
+    on_checkout_clicked.result_frame = result_frame
 
 
 def analyze_late_returns(from_date, to_date, result_frame):
